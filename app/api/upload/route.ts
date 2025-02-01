@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 // Add this line to enable runtime
 export const runtime = 'edge';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const data = await req.formData();
-    const file = data.get('file') as File;
-
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    
     if (!file) {
       return NextResponse.json(
         { error: 'No file provided' },
@@ -15,50 +16,34 @@ export async function POST(req: Request) {
       );
     }
 
-    // Read the file as ArrayBuffer
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const fileName = `${Date.now()}-${file.name.replace(/\s+/g, '-')}`;
 
-    // Convert to base64
-    const base64 = buffer.toString('base64');
-    const mimeType = file.type;
-    const dataUrl = `data:${mimeType};base64,${base64}`;
+    const { data, error } = await supabase.storage
+      .from('product-images')
+      .upload(fileName, buffer, {
+        contentType: file.type,
+        cacheControl: '3600',
+        upsert: false
+      });
 
-    // Prepare the form data for Cloudinary
-    const params = new FormData();
-    params.append('file', dataUrl);
-    params.append('upload_preset', 'autoparts_preset');
-    params.append('folder', 'autoparts');
-
-    // Upload to Cloudinary
-    console.log('Uploading to Cloudinary...');
-    const cloudinaryResponse = await fetch(
-      'https://api.cloudinary.com/v1_1/dsivz1t7t/image/upload',
-      {
-        method: 'POST',
-        body: params,
-        headers: {
-          'Accept': 'application/json',
-        }
-      }
-    );
-
-    if (!cloudinaryResponse.ok) {
-      const errorText = await cloudinaryResponse.text();
-      console.error('Cloudinary Error:', errorText);
-      throw new Error('Upload failed');
+    if (error) {
+      console.error('Supabase upload error:', error);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
     }
 
-    const cloudinaryData = await cloudinaryResponse.json();
-    console.log('Upload successful:', cloudinaryData);
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(data.path);
 
-    return NextResponse.json({
-      success: true,
-      url: cloudinaryData.secure_url
-    });
+    return NextResponse.json({ url: publicUrl });
 
   } catch (error) {
-    console.error('Server error:', error);
+    console.error('Upload error:', error);
     return NextResponse.json(
       { error: 'Upload failed' },
       { status: 500 }

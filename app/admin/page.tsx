@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { useProductsStore } from "@/lib/store/products"
@@ -42,8 +43,10 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible"
 import { ChevronDown, ChevronUp } from "lucide-react"
+import Image from "next/image"
+import { supabase } from "@/lib/supabase"
 
-const DEFAULT_PLACEHOLDER = 'https://res.cloudinary.com/dsivz1t7t/image/upload/v1/autoparts/placeholder-image';
+const DEFAULT_PLACEHOLDER = 'https://placehold.co/300x300/gray/white?text=No+Image';
 
 export default function AdminPage() {
   const router = useRouter()
@@ -65,6 +68,18 @@ export default function AdminPage() {
   const [imageUrl, setImageUrl] = useState("")
   const [uploading, setUploading] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [newProduct, setNewProduct] = useState<Product>({
+    id: '',
+    name: '',
+    partNumber: '',
+    price: 0,
+    category: '',
+    manufacturer: '',
+    description: '',
+    image: DEFAULT_PLACEHOLDER,
+    inStock: true,
+    quantity: 0
+  })
 
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("isAdminAuthenticated")
@@ -90,13 +105,51 @@ export default function AdminPage() {
     setDeleteDialogProduct(product)
   }
 
-  const handleConfirmDelete = () => {
-    if (deleteDialogProduct) {
-      deleteProduct(deleteDialogProduct.id)
-      toast.success("Product deleted successfully")
-      setDeleteDialogProduct(null)
+  const deleteImageFromSupabase = async (imageUrl: string) => {
+    try {
+      // Extract the file path from the URL
+      const filePathMatch = imageUrl.match(/product-images\/(.*)/);
+      if (!filePathMatch) {
+        console.error('Could not extract file path from URL:', imageUrl);
+        return;
+      }
+      
+      const filePath = filePathMatch[1];
+      const { error } = await supabase.storage
+        .from('product-images')
+        .remove([filePath]);
+
+      if (error) {
+        console.error('Error deleting image from Supabase:', error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Failed to delete image:', error);
+      toast.error('Failed to delete image from storage');
     }
-  }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (deleteDialogProduct) {
+      try {
+        // Only attempt to delete if it's not the placeholder image
+        if (deleteDialogProduct.image && 
+            deleteDialogProduct.image !== DEFAULT_PLACEHOLDER && 
+            deleteDialogProduct.image.includes('supabase')) {
+          await deleteImageFromSupabase(deleteDialogProduct.image);
+        }
+        
+        // Delete the product from your store
+        deleteProduct(deleteDialogProduct.id);
+        toast.success("Product deleted successfully");
+      } catch (error) {
+        console.error('Error during product deletion:', error);
+        toast.error("Failed to delete product completely");
+      } finally {
+        setDeleteDialogProduct(null);
+      }
+    }
+  };
 
   const handleAddCategory = () => {
     if (!newCategory.trim()) {
@@ -192,63 +245,47 @@ export default function AdminPage() {
     manufacturer.toLowerCase().includes(manufacturerSearch.toLowerCase())
   )
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
-    
-    setUploading(true);
-    const file = e.target.files[0];
-    
-    // Validate file size
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      toast.error('File size too large. Please upload an image under 10MB');
-      setUploading(false);
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please upload an image file');
-      setUploading(false);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('file', file);
-
+  const handleImageUpload = async (file: File) => {
     try {
+      const formData = new FormData();
+      formData.append('file', file);
+
       const response = await fetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
 
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        const data = await response.json();
-        
-        if (!response.ok) {
-          throw new Error(data.error || 'Failed to upload image');
-        }
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
 
-        if (data.url) {
-          setImageUrl(data.url);
-          toast.success('Image uploaded successfully');
-        } else {
-          throw new Error('No URL received from server');
+      const data = await response.json();
+      return data.url;
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+      return null;
+    }
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        setUploading(true);
+        const imageUrl = await handleImageUpload(file);
+        if (imageUrl) {
+          setNewProduct(prev => ({ ...prev, image: imageUrl }));
+          if (editingProduct) {
+            setEditingProduct(prev => prev ? { ...prev, image: imageUrl } : null);
+          }
         }
-      } else {
-        const text = await response.text();
-        console.error('Non-JSON response:', text);
-        throw new Error('Invalid server response');
-      }
-    } catch (error: unknown) {
-      console.error('Error uploading image:', error);
-      if (error instanceof Error) {
-        toast.error(error.message);
-      } else {
+      } catch (error) {
+        console.error('Upload error:', error);
         toast.error('Failed to upload image');
+      } finally {
+        setUploading(false);
       }
-    } finally {
-      setUploading(false);
     }
   };
 
@@ -328,6 +365,12 @@ export default function AdminPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto max-w-[90vw] w-full md:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>{isCreating ? 'Create Product' : 'Edit Product'}</DialogTitle>
+            <DialogDescription>
+              {isCreating 
+                ? 'Add a new product to your inventory' 
+                : 'Make changes to your product here'
+              }
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
@@ -337,13 +380,17 @@ export default function AdminPage() {
                   src={imageUrl || editingProduct?.image || DEFAULT_PLACEHOLDER}
                   alt="Product preview" 
                   className="h-32 w-32 object-cover rounded-md"
+                  onError={(e) => {
+                    // If image fails to load, fall back to placeholder
+                    e.currentTarget.src = DEFAULT_PLACEHOLDER;
+                  }}
                 />
                 <div className="flex-1">
                   <input
                     type="file"
                     id="image"
                     accept="image/*"
-                    onChange={handleImageUpload}
+                    onChange={handleFileChange}
                     className="w-full"
                     disabled={uploading}
                   />

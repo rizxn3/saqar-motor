@@ -1,12 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
   },
   images: {
     unoptimized: true,
-    domains: ['res.cloudinary.com'],
+    domains: ['lgnhyalofrohkfjbisvk.supabase.co', 'placehold.co']
   },
   experimental: {
     serverActions: true,
