@@ -45,6 +45,7 @@ import {
 import { ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
+import { ImageUpload } from "@/components/ui/image-upload"
 
 const DEFAULT_PLACEHOLDER = 'https://placehold.co/300x300/gray/white?text=No+Image';
 
@@ -374,29 +375,29 @@ export default function AdminPage() {
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label htmlFor="image" className="text-sm font-medium">Product Image</label>
-              <div className="flex items-center gap-4">
-                <img 
-                  src={imageUrl || editingProduct?.image || DEFAULT_PLACEHOLDER}
-                  alt="Product preview" 
-                  className="h-32 w-32 object-cover rounded-md"
-                  onError={(e) => {
-                    // If image fails to load, fall back to placeholder
-                    e.currentTarget.src = DEFAULT_PLACEHOLDER;
-                  }}
-                />
-                <div className="flex-1">
-                  <input
-                    type="file"
-                    id="image"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="w-full"
-                    disabled={uploading}
-                  />
-                  {uploading && <p className="text-sm text-muted-foreground mt-2">Uploading...</p>}
-                </div>
-              </div>
+              <label className="text-sm font-medium">Product Image</label>
+              <ImageUpload
+                currentImage={imageUrl || editingProduct?.image || DEFAULT_PLACEHOLDER}
+                onImageUpload={async (file) => {
+                  try {
+                    setUploading(true);
+                    const imageUrl = await handleImageUpload(file);
+                    if (imageUrl) {
+                      setNewProduct(prev => ({ ...prev, image: imageUrl }));
+                      if (editingProduct) {
+                        setEditingProduct(prev => prev ? { ...prev, image: imageUrl } : null);
+                      }
+                      setImageUrl(imageUrl);
+                    }
+                  } catch (error) {
+                    console.error('Upload error:', error);
+                    toast.error('Failed to upload image');
+                  } finally {
+                    setUploading(false);
+                  }
+                }}
+                isUploading={uploading}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Name</label>
@@ -494,7 +495,7 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto p-3 md:p-6 space-y-4">
       <div className="flex justify-between items-center mb-8">
         <h1 className="text-3xl font-bold">Admin Dashboard</h1>
         <Button 
@@ -508,257 +509,209 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      <div className="grid gap-6">
-        {/* Catalog Management Collapsible */}
-        <Collapsible open={catalogOpen} onOpenChange={setCatalogOpen}>
-          <Card>
-            <CollapsibleTrigger className="w-full">
-              <div className="p-6 flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Catalog Management</h2>
-                {catalogOpen ? (
-                  <ChevronUp className="h-5 w-5" />
-                ) : (
-                  <ChevronDown className="h-5 w-5" />
-                )}
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-6 pb-6">
-                <Tabs defaultValue="categories">
-                  <TabsList className="mb-4">
-                    <TabsTrigger value="categories">Categories</TabsTrigger>
-                    <TabsTrigger value="manufacturers">Manufacturers</TabsTrigger>
-                  </TabsList>
-
-                  <TabsContent value="categories">
-                    <div className="space-y-4">
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              placeholder="Search categories..."
-                              value={categorySearch}
-                              onChange={(e) => setCategorySearch(e.target.value)}
-                              className="pl-10 pr-10"
-                            />
-                            {categorySearch && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-accent"
-                                onClick={() => setCategorySearch("")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <Input
-                          placeholder="New category name"
-                          value={newCategory}
-                          onChange={(e) => setNewCategory(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+      <Tabs defaultValue="products" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex">
+          <TabsTrigger value="products">Products</TabsTrigger>
+          <TabsTrigger value="catalog">Catalog</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="products" className="space-y-4">
+          <div className="flex flex-col md:flex-row justify-between gap-2 md:items-center">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search products..."
+                className="pl-8"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+              />
+            </div>
+            <Button onClick={handleCreateProduct} className="w-full md:w-auto">
+              <Plus className="mr-2 h-4 w-4" /> Add Product
+            </Button>
+          </div>
+          
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[80px]">Image</TableHead>
+                  <TableHead className="min-w-[150px]">Name</TableHead>
+                  <TableHead className="hidden md:table-cell">Part Number</TableHead>
+                  <TableHead className="hidden md:table-cell">Category</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.map((product) => (
+                  <TableRow key={product.id}>
+                    <TableCell>
+                      <div className="relative w-12 h-12 rounded-md overflow-hidden">
+                        <Image
+                          src={product.image || DEFAULT_PLACEHOLDER}
+                          alt={product.name}
+                          fill
+                          className="object-cover"
+                          unoptimized
                         />
-                        <Button onClick={handleAddCategory}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell className="hidden md:table-cell">{product.partNumber}</TableCell>
+                    <TableCell className="hidden md:table-cell">{product.category}</TableCell>
+                    <TableCell>${product.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEditClick(product)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteClick(product)}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Category Name</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredCategories.map((category) => (
-                            <TableRow key={category}>
-                              <TableCell>{category}</TableCell>
-                              <TableCell>
-                                <Button 
-                                  variant="destructive" 
-                                  size="sm"
-                                  onClick={() => handleDeleteCategory(category)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="manufacturers">
-                    <div className="space-y-4">
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                            <Input
-                              placeholder="Search manufacturers..."
-                              value={manufacturerSearch}
-                              onChange={(e) => setManufacturerSearch(e.target.value)}
-                              className="pl-10 pr-10"
-                            />
-                            {manufacturerSearch && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-accent"
-                                onClick={() => setManufacturerSearch("")}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        <Input
-                          placeholder="New manufacturer name"
-                          value={newManufacturer}
-                          onChange={(e) => setNewManufacturer(e.target.value)}
-                          onKeyDown={(e) => e.key === 'Enter' && handleAddManufacturer()}
-                        />
-                        <Button onClick={handleAddManufacturer}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Add
-                        </Button>
-                      </div>
-
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Manufacturer Name</TableHead>
-                            <TableHead className="w-[100px]">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {filteredManufacturers.map((manufacturer) => (
-                            <TableRow key={manufacturer}>
-                              <TableCell>{manufacturer}</TableCell>
-                              <TableCell>
-                                <Button 
-                                  variant="destructive" 
-                                  size="sm"
-                                  onClick={() => handleDeleteManufacturer(manufacturer)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-
-        {/* Products Management Collapsible */}
-        <Collapsible open={productsOpen} onOpenChange={setProductsOpen}>
-          <Card>
-            <CollapsibleTrigger className="w-full">
-              <div className="p-6 flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Products Management</h2>
-                {productsOpen ? (
-                  <ChevronUp className="h-5 w-5" />
-                ) : (
-                  <ChevronDown className="h-5 w-5" />
-                )}
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-6 pb-6">
-                <div className="mb-4 flex justify-between items-center">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input
-                      placeholder="Search products..."
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      className="pl-10 pr-10"
-                    />
-                    {productSearch && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-accent"
-                        onClick={() => setProductSearch("")}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <Button onClick={handleCreateProduct} className="ml-4">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Product
-                  </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="catalog" className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search categories..."
+                    value={categorySearch}
+                    onChange={(e) => setCategorySearch(e.target.value)}
+                    className="pl-10 pr-10"
+                  />
+                  {categorySearch && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-accent"
+                      onClick={() => setCategorySearch("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Part Number</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Manufacturer</TableHead>
-                      <TableHead className="text-right">Price</TableHead>
-                      <TableHead>Stock Status</TableHead>
-                      <TableHead className="text-right">Quantity</TableHead>
-                      <TableHead className="w-[100px]">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map((product) => (
-                      <TableRow key={product.id}>
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell>{product.partNumber}</TableCell>
-                        <TableCell>{product.category}</TableCell>
-                        <TableCell>{product.manufacturer}</TableCell>
-                        <TableCell className="text-right">
-                          ${product.price.toFixed(2)}
-                        </TableCell>
-                        <TableCell>
-                          {product.inStock ? "In Stock" : "Out of Stock"}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {product.quantity}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleEditClick(product)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="destructive" 
-                              size="sm"
-                              onClick={() => handleDeleteClick(product)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
               </div>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-      </div>
+              <Input
+                placeholder="New category name"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
+              />
+              <Button onClick={handleAddCategory}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add
+              </Button>
+            </div>
 
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category Name</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCategories.map((category) => (
+                  <TableRow key={category}>
+                    <TableCell>{category}</TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDeleteCategory(category)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search manufacturers..."
+                    value={manufacturerSearch}
+                    onChange={(e) => setManufacturerSearch(e.target.value)}
+                    className="pl-10 pr-10"
+                  />
+                  {manufacturerSearch && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-accent"
+                      onClick={() => setManufacturerSearch("")}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+              <Input
+                placeholder="New manufacturer name"
+                value={newManufacturer}
+                onChange={(e) => setNewManufacturer(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAddManufacturer()}
+              />
+              <Button onClick={handleAddManufacturer}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add
+              </Button>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Manufacturer Name</TableHead>
+                  <TableHead className="w-[100px]">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredManufacturers.map((manufacturer) => (
+                  <TableRow key={manufacturer}>
+                    <TableCell>{manufacturer}</TableCell>
+                    <TableCell>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleDeleteManufacturer(manufacturer)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
+      </Tabs>
+      
       <EditDialog />
 
       <AlertDialog 
@@ -784,7 +737,6 @@ export default function AdminPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Category Delete Confirmation Dialog */}
       <AlertDialog 
         open={deletingCategory !== null} 
         onOpenChange={(open) => !open && setDeletingCategory(null)}
@@ -809,7 +761,6 @@ export default function AdminPage() {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Manufacturer Delete Confirmation Dialog */}
       <AlertDialog 
         open={deletingManufacturer !== null} 
         onOpenChange={(open) => !open && setDeletingManufacturer(null)}

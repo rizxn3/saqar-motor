@@ -8,6 +8,7 @@ import { CartSheet } from '@/components/cart/cart-sheet'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { Footer } from '@/components/footer'
 import { Providers } from "@/components/providers"
+import Link from 'next/link'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -42,10 +43,14 @@ export default function RootLayout({
           >
             <QueryProvider>
               <div className="min-h-screen flex flex-col">
-                <header className="border-b">
-                  <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                    <h1 className="text-xl font-bold">AutoParts B2B</h1>
-                    <div className="flex items-center gap-4">
+                <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+                  <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+                    <h1 className="text-lg md:text-xl font-bold">
+                      <Link href="/" className="hover:opacity-80 transition-opacity">
+                        AutoParts B2B
+                      </Link>
+                    </h1>
+                    <div className="flex items-center gap-2 md:gap-4">
                       <ThemeToggle />
                       <CartSheet />
                     </div>
@@ -56,7 +61,7 @@ export default function RootLayout({
                 </main>
                 <Footer />
               </div>
-              <Toaster />
+              <Toaster position="bottom-right" />
             </QueryProvider>
           </ThemeProvider>
         </Providers>
