@@ -83,9 +83,9 @@ export default function AdminPage() {
   })
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAdminAuthenticated")
-    if (!isAuthenticated) {
-      router.push("/")
+    const isAdmin = document.cookie.includes('isAdmin=true');
+    if (!isAdmin) {
+      router.push("/login")
       toast.error("Please login as admin")
     }
   }, [router])
@@ -501,7 +501,7 @@ export default function AdminPage() {
         <Button 
           variant="destructive" 
           onClick={() => {
-            localStorage.removeItem("isAdminAuthenticated")
+            document.cookie = 'isAdmin=false; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
             router.push("/")
           }}
         >

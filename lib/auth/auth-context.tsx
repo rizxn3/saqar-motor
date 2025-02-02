@@ -12,7 +12,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (userData: User) => void;
+  login: (userData: User, redirectPath?: string) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -46,11 +46,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login = (userData: User) => {
+  const login = (userData: User, redirectPath?: string) => {
     try {
       localStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
-      router.push('/dashboard');
+      // Use the provided redirectPath or default to dashboard
+      router.push(redirectPath || '/dashboard');
     } catch (error) {
       console.error('Error storing user data:', error);
     }

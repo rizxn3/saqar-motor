@@ -3,28 +3,27 @@ import type { NextRequest } from 'next/server';
 import { verifyToken } from './lib/auth/utils';
 
 export function middleware(request: NextRequest) {
-  // Paths that require authentication
-  const protectedPaths = ['/dashboard', '/admin'];
-  const adminPaths = ['/admin'];
-
   const path = request.nextUrl.pathname;
-  const token = request.cookies.get('token')?.value;
+  
+  // Admin path protection
+  if (path.startsWith('/admin')) {
+    const isAdmin = request.cookies.get('isAdmin')?.value === 'true';
+    if (!isAdmin) {
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+    return NextResponse.next();
+  }
 
-  // Check if path requires protection
-  if (protectedPaths.some(prefix => path.startsWith(prefix))) {
+  // Regular user path protection
+  if (path.startsWith('/dashboard')) {
+    const token = request.cookies.get('token')?.value;
     if (!token) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    const decoded = token ? verifyToken(token) : null;
-    
+    const decoded = verifyToken(token);
     if (!decoded) {
       return NextResponse.redirect(new URL('/login', request.url));
-    }
-
-    // Check admin routes
-    if (adminPaths.some(prefix => path.startsWith(prefix)) && decoded.role !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/', request.url));
     }
   }
 

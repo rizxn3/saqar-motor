@@ -6,7 +6,22 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json();
 
-    // Find auth record with user details
+    // Special case for admin
+    if (email === 'Admin@123' && password === '2233') {
+      return NextResponse.json({
+        success: true,
+        user: {
+          id: 'admin',
+          name: 'Admin',
+          email: 'Admin@123',
+          role: 'ADMIN'
+        },
+        isAdmin: true,
+        redirectTo: '/admin'
+      });
+    }
+
+    // Regular authentication flow
     const { data: auth, error: authError } = await supabase
       .from('auth')
       .select(`
@@ -36,7 +51,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Return user data
     return NextResponse.json({
       success: true,
       user: {
@@ -44,7 +58,8 @@ export async function POST(request: Request) {
         name: auth.users.name,
         email: auth.email,
         role: auth.users.role
-      }
+      },
+      redirectTo: '/dashboard'
     });
 
   } catch (error) {

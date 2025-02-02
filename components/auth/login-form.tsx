@@ -9,18 +9,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner"
 import Link from "next/link"
 
-export function LoginForm() {
+interface LoginFormProps {
+  isAdmin?: boolean;
+}
+
+export function LoginForm({ isAdmin = false }: LoginFormProps) {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      console.log('Attempting login...');
+      // Check for admin credentials directly
+      if (email === 'Admin@123' && password === '2233') {
+        // Set admin cookie
+        document.cookie = 'isAdmin=true; path=/';
+        toast.success("Admin login successful")
+        router.replace('/admin')
+        return
+      }
+
+      // Regular user authentication
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -28,7 +42,6 @@ export function LoginForm() {
       })
 
       const data = await response.json()
-      console.log('Login response:', response.status, data);
 
       if (!response.ok) {
         throw new Error(data.error || "Login failed")
@@ -38,9 +51,10 @@ export function LoginForm() {
         throw new Error("Invalid response format")
       }
 
-      // Pass the user data to login
+      // Regular user login
       await login(data.user)
-      toast.success("Logged in successfully")
+      toast.success("Login successful")
+      router.push('/dashboard')
     } catch (error) {
       console.error('Login error:', error);
       toast.error(error instanceof Error ? error.message : "Login failed")
@@ -52,8 +66,13 @@ export function LoginForm() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Login</CardTitle>
-        <CardDescription>Enter your credentials to access your account</CardDescription>
+        <CardTitle>{isAdmin ? "Admin Login" : "Login"}</CardTitle>
+        <CardDescription>
+          {isAdmin 
+            ? "Enter your admin credentials" 
+            : "Enter your credentials to access your account"
+          }
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,12 +105,14 @@ export function LoginForm() {
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? "Logging in..." : "Login"}
           </Button>
-          <p className="text-sm text-center text-muted-foreground">
-            Don't have an account?{" "}
-            <Link href="/signup" className="text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
+          {!isAdmin && (
+            <p className="text-sm text-center text-muted-foreground">
+              Don't have an account?{" "}
+              <Link href="/signup" className="text-primary hover:underline">
+                Sign up
+              </Link>
+            </p>
+          )}
         </form>
       </CardContent>
     </Card>
