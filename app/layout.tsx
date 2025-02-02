@@ -9,6 +9,8 @@ import { ThemeToggle } from '@/components/theme-toggle'
 import { Footer } from '@/components/footer'
 import { Providers } from "@/components/providers"
 import Link from 'next/link'
+import { AuthProvider } from '@/lib/auth/auth-context'
+import { ProfileButton } from "@/components/auth/profile-button"
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -34,37 +36,40 @@ export default function RootLayout({
         />
       </head>
       <body className={inter.className}>
-        <Providers>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <QueryProvider>
-              <div className="min-h-screen flex flex-col">
-                <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
-                  <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-                    <h1 className="text-lg md:text-xl font-bold">
-                      <Link href="/" className="hover:opacity-80 transition-opacity">
-                        AutoParts B2B
-                      </Link>
-                    </h1>
-                    <div className="flex items-center gap-2 md:gap-4">
-                      <ThemeToggle />
-                      <CartSheet />
+        <AuthProvider>
+          <Providers>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <QueryProvider>
+                <div className="min-h-screen flex flex-col">
+                  <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
+                    <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+                      <h1 className="text-lg md:text-xl font-bold">
+                        <Link href="/" className="hover:opacity-80 transition-opacity">
+                          AutoParts B2B
+                        </Link>
+                      </h1>
+                      <div className="flex items-center gap-2 md:gap-4">
+                        <ThemeToggle />
+                        <CartSheet />
+                        <ProfileButton />
+                      </div>
                     </div>
-                  </div>
-                </header>
-                <main className="flex-1">
-                  {children}
-                </main>
-                <Footer />
-              </div>
-              <Toaster position="bottom-right" />
-            </QueryProvider>
-          </ThemeProvider>
-        </Providers>
+                  </header>
+                  <main className="flex-1">
+                    {children}
+                  </main>
+                  <Footer />
+                </div>
+                <Toaster position="bottom-right" />
+              </QueryProvider>
+            </ThemeProvider>
+          </Providers>
+        </AuthProvider>
       </body>
     </html>
   )
