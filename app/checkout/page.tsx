@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -15,13 +14,20 @@ import {
 import { useCartStore } from "@/lib/store/cart"
 import { toast } from "sonner"
 import Image from "next/image"
-import { Trash2, Plus, Minus } from "lucide-react"
+import { Trash2 } from "lucide-react"
+import { Minus, Plus } from "lucide-react"
+import { Input } from "@/components/ui/input"
 
 export default function CheckoutPage() {
   const router = useRouter()
   const { items, removeItem, updateQuantity } = useCartStore()
 
-  const total = items.reduce((acc, item) => acc + item.price * item.quantity, 0)
+  const handleQuantityChange = (id: string, value: string) => {
+    const newQuantity = parseInt(value)
+    if (newQuantity && newQuantity > 0) {
+      updateQuantity(id, newQuantity)
+    }
+  }
 
   // Mobile card view for each item
   const CartItem = ({ item }: { item: any }) => (
@@ -42,7 +48,6 @@ export default function CheckoutPage() {
             Part #: {item.partNumber}
           </p>
           <div className="flex items-center justify-between mt-2">
-            <p className="font-medium">${item.price.toFixed(2)}</p>
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -56,7 +61,14 @@ export default function CheckoutPage() {
               >
                 <Minus className="h-4 w-4" />
               </Button>
-              <span className="w-8 text-center">{item.quantity}</span>
+              <Input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={item.quantity}
+                onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                className="w-14 h-8 text-center"
+              />
               <Button
                 variant="outline"
                 size="icon"
@@ -66,11 +78,6 @@ export default function CheckoutPage() {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-          </div>
-          <div className="flex items-center justify-between mt-2">
-            <p className="text-sm font-medium">
-              Subtotal: ${(item.price * item.quantity).toFixed(2)}
-            </p>
             <Button
               variant="ghost"
               size="icon"
@@ -89,8 +96,8 @@ export default function CheckoutPage() {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
-          <Button onClick={() => router.push("/")}>Continue Shopping</Button>
+          <h1 className="text-2xl font-bold mb-4">Your quotation request is empty</h1>
+          <Button onClick={() => router.push("/")}>Browse Products</Button>
         </div>
       </div>
     )
@@ -98,10 +105,19 @@ export default function CheckoutPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-6">
-      <h1 className="text-2xl md:text-3xl font-bold">Checkout</h1>
+      <h1 className="text-2xl md:text-3xl font-bold">Request Quotation</h1>
+      
+      {/* Mobile view (card layout) */}
+      <div className="block lg:hidden">
+        <Card>
+          {items.map((item) => (
+            <CartItem key={item.id} item={item} />
+          ))}
+        </Card>
+      </div>
 
-      {/* Desktop view */}
-      <div className="hidden md:block">
+      {/* Desktop view (table layout) */}
+      <div className="hidden lg:block">
         <Card>
           <Table>
             <TableHeader>
@@ -109,17 +125,15 @@ export default function CheckoutPage() {
                 <TableHead className="w-[100px]">Image</TableHead>
                 <TableHead>Product</TableHead>
                 <TableHead>Part Number</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-center">Quantity</TableHead>
-                <TableHead className="text-right">Subtotal</TableHead>
-                <TableHead className="w-[70px]"></TableHead>
+                <TableHead>Quantity</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {items.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
-                    <div className="relative w-16 h-16 rounded-md overflow-hidden">
+                    <div className="relative w-20 h-20 rounded-md overflow-hidden">
                       <Image
                         src={item.image}
                         alt={item.name}
@@ -129,13 +143,10 @@ export default function CheckoutPage() {
                       />
                     </div>
                   </TableCell>
-                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell>{item.name}</TableCell>
                   <TableCell>{item.partNumber}</TableCell>
-                  <TableCell className="text-right">
-                    ${item.price.toFixed(2)}
-                  </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-center gap-2">
+                    <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="icon"
@@ -148,7 +159,14 @@ export default function CheckoutPage() {
                       >
                         <Minus className="h-4 w-4" />
                       </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={item.quantity}
+                        onChange={(e) => handleQuantityChange(item.id, e.target.value)}
+                        className="w-14 h-8 text-center"
+                      />
                       <Button
                         variant="outline"
                         size="icon"
@@ -159,14 +177,11 @@ export default function CheckoutPage() {
                       </Button>
                     </div>
                   </TableCell>
-                  <TableCell className="text-right">
-                    ${(item.price * item.quantity).toFixed(2)}
-                  </TableCell>
                   <TableCell>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-destructive hover:text-destructive"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => removeItem(item.id)}
                     >
                       <Trash2 className="h-4 w-4" />
@@ -179,35 +194,17 @@ export default function CheckoutPage() {
         </Card>
       </div>
 
-      {/* Mobile view */}
-      <div className="md:hidden">
-        <Card>
-          {items.map((item) => (
-            <CartItem key={item.id} item={item} />
-          ))}
-        </Card>
+      <div className="flex justify-end gap-4">
+        <Button variant="outline" onClick={() => router.push("/")}>
+          Add More Items
+        </Button>
+        <Button onClick={() => {
+          toast.success("Your quotation request has been submitted successfully!")
+          router.push("/")
+        }}>
+          Submit Request
+        </Button>
       </div>
-
-      {/* Order summary - same for both views */}
-      <Card className="p-6">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Order Summary</h2>
-          <div className="flex justify-between items-center text-lg font-medium">
-            <span>Total</span>
-            <span>${total.toFixed(2)}</span>
-          </div>
-          <Button 
-            className="w-full" 
-            size="lg"
-            onClick={() => {
-              toast.success("Order placed successfully!")
-              router.push("/")
-            }}
-          >
-            Place Order
-          </Button>
-        </div>
-      </Card>
     </div>
   )
 }

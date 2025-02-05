@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import type { Product } from '@/lib/types/prisma'
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
-import { X, Plus, Minus } from "lucide-react"
+import { Plus, Minus, X } from "lucide-react"
 
 const DEFAULT_IMAGE = 'https://placehold.co/300x300/gray/white?text=No+Image'
 
@@ -27,15 +27,10 @@ export function ProductCard({ product }: ProductCardProps) {
     }
   }
 
-  const handleAddToCart = () => {
+  const handleAddToQuote = () => {
     const quantityNum = parseInt(quantity)
     if (!quantityNum || quantityNum <= 0) {
-      toast.error("Please enter a quantity greater than 0")
-      return
-    }
-
-    if (quantityNum > product.quantity) {
-      toast.error(`Only ${product.quantity} items available`)
+      toast.error("Please enter a valid quantity")
       return
     }
 
@@ -43,11 +38,11 @@ export function ProductCard({ product }: ProductCardProps) {
       id: product.id,
       partNumber: product.partNumber,
       name: product.name,
-      price: product.price,
+      price: 0,
       quantity: quantityNum,
       image: product.image || DEFAULT_IMAGE
     })
-    toast.success("Added to cart")
+    toast.success("Added to quotation request")
     setIsSelectingQuantity(false)
     setQuantity("1")
   }
@@ -86,16 +81,15 @@ export function ProductCard({ product }: ProductCardProps) {
         <CardTitle className="line-clamp-2 mb-2">{product.name}</CardTitle>
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">Part #: {product.partNumber}</p>
-          <p className="text-lg font-semibold">${product.price.toFixed(2)}</p>
-          <p className={`text-sm ${product.inStock ? 'text-green-600' : 'text-red-600'}`}>
-            {product.inStock ? `In Stock (${product.quantity})` : 'Out of Stock'}
+          <p className="text-sm font-medium text-green-600">
+            {product.inStock && "In Stock"}
           </p>
         </div>
       </CardContent>
-      <CardFooter className="p-4 pt-0">
+      <CardFooter className="p-4 pt-0 flex flex-col gap-2">
         {isSelectingQuantity ? (
-          <div className="w-full space-y-2">
-            <div className="flex items-center gap-2">
+          <>
+            <div className="flex items-center gap-2 w-full">
               <Button 
                 variant="outline" 
                 size="icon" 
@@ -110,7 +104,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 pattern="[0-9]*"
                 value={quantity}
                 onChange={(e) => handleQuantityChange(e.target.value)}
-                className="text-center"
+                className="text-center h-8"
               />
               <Button 
                 variant="outline" 
@@ -121,7 +115,7 @@ export function ProductCard({ product }: ProductCardProps) {
                 <Plus className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full">
               <Button 
                 variant="outline" 
                 className="flex-1" 
@@ -132,19 +126,18 @@ export function ProductCard({ product }: ProductCardProps) {
               </Button>
               <Button 
                 className="flex-1" 
-                onClick={handleAddToCart}
+                onClick={handleAddToQuote}
               >
                 Add
               </Button>
             </div>
-          </div>
+          </>
         ) : (
           <Button 
             className="w-full" 
             onClick={() => setIsSelectingQuantity(true)}
-            disabled={!product.inStock}
           >
-            Add to Cart
+            Add to Quote
           </Button>
         )}
       </CardFooter>

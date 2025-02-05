@@ -7,14 +7,12 @@ import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { CartItem } from "./cart-item"
 import { useCartStore } from "@/lib/store/cart"
-import { formatPrice } from "@/lib/utils"
 import { useState, useEffect } from "react"
 
 export function CartSheet() {
   const router = useRouter()
-  const { items, getTotalItems, getTotalPrice } = useCartStore()
+  const { items, getTotalItems } = useCartStore()
   const itemCount = getTotalItems()
-  const total = getTotalPrice()
   const [isOpen, setIsOpen] = useState(false)
   const [isMounted, setIsMounted] = useState(false)
 
@@ -45,7 +43,7 @@ export function CartSheet() {
       </SheetTrigger>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Cart ({itemCount} items)</SheetTitle>
+          <SheetTitle>Quotation Request ({itemCount} items)</SheetTitle>
         </SheetHeader>
         {itemCount > 0 ? (
           <>
@@ -57,18 +55,14 @@ export function CartSheet() {
               </div>
             </ScrollArea>
             <div className="border-t pt-4">
-              <div className="flex justify-between mb-4">
-                <span>Total:</span>
-                <span className="font-semibold">{formatPrice(total)}</span>
-              </div>
               <Button className="w-full" onClick={handleCheckout}>
-                Checkout
+                Request Quotation
               </Button>
             </div>
           </>
         ) : (
           <div className="flex h-full items-center justify-center">
-            <p className="text-muted-foreground">Your cart is empty</p>
+            <p className="text-muted-foreground">Your quotation request is empty</p>
           </div>
         )}
       </SheetContent>
