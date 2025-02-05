@@ -11,8 +11,10 @@ import { Providers } from "@/components/providers"
 import Link from 'next/link'
 import { AuthProvider } from '@/lib/auth/auth-context'
 import { ProfileButton } from "@/components/auth/profile-button"
+import { Playfair_Display } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'] })
+const playfair = Playfair_Display({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'AutoParts B2B Platform',
@@ -48,9 +50,9 @@ export default function RootLayout({
                 <div className="min-h-screen flex flex-col">
                   <header className="border-b sticky top-0 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-50">
                     <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-                      <h1 className="text-lg md:text-xl font-bold">
+                      <h1 className={`text-2xl md:text-3xl font-bold ${playfair.className}`}>
                         <Link href="/" className="hover:opacity-80 transition-opacity">
-                          AutoParts B2B
+                          Al Qahtani
                         </Link>
                       </h1>
                       <div className="flex items-center gap-2 md:gap-4">

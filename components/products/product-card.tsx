@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { useCartStore } from "@/lib/store/cart"
 import { toast } from "sonner"
-import { Product } from "@/lib/types"
+import type { Product } from '@/lib/types/prisma'
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { X, Plus, Minus } from "lucide-react"
+
+const DEFAULT_IMAGE = 'https://placehold.co/300x300/gray/white?text=No+Image'
 
 interface ProductCardProps {
   product: Product
@@ -20,7 +22,6 @@ export function ProductCard({ product }: ProductCardProps) {
   const [quantity, setQuantity] = useState("1")
 
   const handleQuantityChange = (value: string) => {
-    // Allow empty value or numbers
     if (value === "" || /^\d+$/.test(value)) {
       setQuantity(value)
     }
@@ -39,7 +40,7 @@ export function ProductCard({ product }: ProductCardProps) {
       name: product.name,
       price: product.price,
       quantity: quantityNum,
-      image: product.image
+      image: product.image || DEFAULT_IMAGE
     })
     toast.success("Added to cart")
     setIsSelectingQuantity(false)
@@ -68,7 +69,7 @@ export function ProductCard({ product }: ProductCardProps) {
       <CardHeader className="p-0">
         <div className="aspect-square relative">
           <Image
-            src={product.image}
+            src={product.image || DEFAULT_IMAGE}
             alt={product.name}
             fill
             className="object-cover rounded-t-lg"
