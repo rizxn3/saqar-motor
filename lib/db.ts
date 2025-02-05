@@ -5,7 +5,9 @@ export const db = {
   // Product operations
   products: {
     getAll: async () => {
-      return prisma.product.findMany()
+      return prisma.product.findMany({
+        orderBy: { createdAt: 'desc' }
+      })
     },
     
     getById: async (id: string) => {
@@ -40,9 +42,22 @@ export const db = {
             { name: { contains: query, mode: 'insensitive' } },
             { partNumber: { contains: query, mode: 'insensitive' } },
             { category: { contains: query, mode: 'insensitive' } },
-            { manufacturer: { contains: query, mode: 'insensitive' } }
+            { manufacturer: { contains: query, mode: 'insensitive' } },
+            { tags: { has: query } }
           ]
         }
+      })
+    },
+
+    getByCategory: async (category: string) => {
+      return prisma.product.findMany({
+        where: { category }
+      })
+    },
+
+    getByManufacturer: async (manufacturer: string) => {
+      return prisma.product.findMany({
+        where: { manufacturer }
       })
     }
   },

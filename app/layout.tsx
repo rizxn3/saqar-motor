@@ -14,7 +14,11 @@ import { ProfileButton } from "@/components/auth/profile-button"
 import { Playfair_Display } from 'next/font/google'
 
 const inter = Inter({ subsets: ['latin'] })
-const playfair = Playfair_Display({ subsets: ['latin'] })
+const playfair = Playfair_Display({ 
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700', '800', '900'],
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'AutoParts B2B Platform',

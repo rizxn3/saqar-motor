@@ -1,9 +1,9 @@
-import { Prisma, PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
 
 // Define the types using Prisma namespace
-export type Product = Prisma.ProductGetPayload<Record<string, never>>
-export type User = Prisma.UserGetPayload<Record<string, never>>
-export type UserRole = Prisma.UserRole
+export type Product = Prisma.ProductGetPayload<{}>
+export type User = Prisma.usersGetPayload<{}>
+export type UserRole = 'USER' | 'ADMIN' | 'VENDOR'
 
-// Export prisma instance if needed
-export const prisma = new PrismaClient() 
+// Don't create a new PrismaClient instance here
+// Instead, use the one from lib/prisma.ts 

@@ -133,7 +133,16 @@ export default function AdminPage() {
   const handleConfirmDelete = async () => {
     if (deleteDialogProduct) {
       try {
-        // Only attempt to delete if it's not the placeholder image
+        // Call the API to delete the product from the database
+        const response = await fetch(`/api/products?id=${deleteDialogProduct.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete product from database');
+        }
+
+        // Only attempt to delete image if it's not the placeholder image
         if (deleteDialogProduct.image && 
             deleteDialogProduct.image !== DEFAULT_PLACEHOLDER && 
             deleteDialogProduct.image.includes('supabase')) {
@@ -324,34 +333,58 @@ export default function AdminPage() {
       e.preventDefault()
       if (!editingProduct) return
 
-      const updatedProduct: Product = {
-        ...editingProduct,
-        name: name.trim(),
-        price: parseFloat(price),
-        category: category.trim(),
-        partNumber: partNumber.trim(),
-        manufacturer: manufacturer.trim(),
-        inStock: inStock,
-        quantity: quantity === '' ? 0 : parseInt(quantity.toString()),
-        description: description.trim() || `Description for ${name.trim()}`,
-        image: imageUrl || editingProduct.image,
-      }
+      try {
+        const productData = {
+          name: name.trim(),
+          price: parseFloat(price),
+          category: category.trim(),
+          partNumber: partNumber.trim(),
+          manufacturer: manufacturer.trim(),
+          description: description.trim() || `Description for ${name.trim()}`,
+          image: imageUrl || editingProduct.image,
+          inStock: inStock,
+          quantity: quantity === '' ? 0 : parseInt(quantity.toString()),
+          specifications: null, // Add if you have these fields
+          features: [],
+          additionalImages: [],
+          minOrderQuantity: 1,
+          weight: null,
+          dimensions: null,
+          warranty: null,
+          compatibleModels: [],
+          tags: [category.trim(), manufacturer.trim()]
+        }
 
-      if (imageUrl) {
-        updatedProduct.imageUrl = imageUrl
-      }
+        const response = await fetch('/api/products', {
+          method: isCreating ? 'POST' : 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(isCreating ? productData : { id: editingProduct.id, ...productData }),
+        })
 
-      if (isCreating) {
-        addProduct(updatedProduct)
-        toast.success("Product created successfully")
-      } else {
-        handleSaveEdit(updatedProduct)
-      }
+        if (!response.ok) {
+          throw new Error('Failed to save product')
+        }
 
-      setIsEditDialogOpen(false)
-      setEditingProduct(null)
-      setIsCreating(false)
-      setImageUrl("")
+        const savedProduct = await response.json()
+
+        if (isCreating) {
+          addProduct(savedProduct)
+          toast.success("Product created successfully")
+        } else {
+          updateProduct(editingProduct.id, savedProduct)
+          toast.success("Product updated successfully")
+        }
+
+        setIsEditDialogOpen(false)
+        setEditingProduct(null)
+        setIsCreating(false)
+        setImageUrl("")
+      } catch (error) {
+        console.error('Error saving product:', error)
+        toast.error(isCreating ? "Failed to create product" : "Failed to update product")
+      }
     }
 
     return (

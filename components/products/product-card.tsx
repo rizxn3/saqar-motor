@@ -34,6 +34,11 @@ export function ProductCard({ product }: ProductCardProps) {
       return
     }
 
+    if (quantityNum > product.quantity) {
+      toast.error(`Only ${product.quantity} items available`)
+      return
+    }
+
     addItem({
       id: product.id,
       partNumber: product.partNumber,
@@ -83,7 +88,7 @@ export function ProductCard({ product }: ProductCardProps) {
           <p className="text-sm text-muted-foreground">Part #: {product.partNumber}</p>
           <p className="text-lg font-semibold">${product.price.toFixed(2)}</p>
           <p className={`text-sm ${product.inStock ? 'text-green-600' : 'text-red-600'}`}>
-            {product.inStock ? 'In Stock' : 'Out of Stock'}
+            {product.inStock ? `In Stock (${product.quantity})` : 'Out of Stock'}
           </p>
         </div>
       </CardContent>
