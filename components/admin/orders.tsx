@@ -31,6 +31,7 @@ interface Quotation {
   userId: string
   status: string
   createdAt: string
+  updatedAt?: string
   items: QuotationItem[]
   user: {
     name: string
@@ -80,11 +81,33 @@ export function Orders() {
   }
 
   const handlePriceChange = (itemId: string, price: string) => {
+    // If the input is empty, set it to empty string
+    if (price === '') {
+      setPrices(prev => {
+        const newPrices = { ...prev }
+        delete newPrices[itemId] // Remove the price entry completely
+        return newPrices
+      })
+      return
+    }
+
     const numPrice = parseFloat(price)
-    if (!isNaN(numPrice) && numPrice >= 0) {
+    // Allow any valid number including 0
+    if (!isNaN(numPrice)) {
       setPrices(prev => ({ ...prev, [itemId]: numPrice }))
     }
   }
+
+  const formatIndianPrice = (amount: number) => {
+    // Convert to Indian format (e.g., 1,23,456.78)
+    const formatter = new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+    return formatter.format(amount);
+  };
 
   const calculateSubtotal = (items: QuotationItem[]) => {
     return items.reduce((total, item) => {
@@ -195,36 +218,36 @@ export function Orders() {
                                     type="number"
                                     min="0"
                                     step="0.01"
-                                    value={prices[item.id] || ''}
+                                    value={prices[item.id] ?? ''}
                                     onChange={(e) => handlePriceChange(item.id, e.target.value)}
                                     className="text-right"
-                                    disabled={quotation.status === 'UPDATED'}
                                   />
                                 </td>
                                 <td className="text-right">
-                                  ${((prices[item.id] || 0) * item.quantity).toFixed(2)}
+                                  {formatIndianPrice((prices[item.id] || 0) * item.quantity)}
                                 </td>
                               </tr>
                             ))}
                             <tr>
                               <td colSpan={6} className="text-right font-medium">Subtotal:</td>
                               <td className="text-right font-medium">
-                                ${calculateSubtotal(quotation.items).toFixed(2)}
+                                {formatIndianPrice(calculateSubtotal(quotation.items))}
                               </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
-                      {quotation.status !== 'UPDATED' && (
-                        <div className="flex justify-end">
-                          <Button 
-                            onClick={() => handleUpdateQuotation(quotation.id, quotation.items)}
-                            disabled={!quotation.items.every(item => prices[item.id] > 0)}
-                          >
-                            Send Price Update
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex justify-end gap-4">
+                        <p className="text-sm text-muted-foreground self-center">
+                          Last updated: {quotation.status === 'UPDATED' && quotation.updatedAt ? format(new Date(quotation.updatedAt), "PPP p") : 'Not yet updated'}
+                        </p>
+                        <Button 
+                          onClick={() => handleUpdateQuotation(quotation.id, quotation.items)}
+                          disabled={!quotation.items.every(item => prices[item.id] > 0)}
+                        >
+                          Update Prices
+                        </Button>
+                      </div>
                     </div>
                   </AccordionContent>
                 </AccordionItem>

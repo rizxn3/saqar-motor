@@ -44,6 +44,7 @@ export async function GET() {
       userId: quotation.userId,
       status: quotation.status,
       createdAt: quotation.createdAt,
+      updatedAt: quotation.updatedAt,
       user: {
         name: quotation.user.name,
         company_name: quotation.user.company_name,
