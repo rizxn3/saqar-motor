@@ -36,8 +36,9 @@ export function LoginForm({ isAdmin = false }: LoginFormProps) {
     try {
       // Check for admin credentials directly
       if (email === 'Admin@123' && password === '2233') {
-        // Set admin cookie
+        // Set admin cookies
         document.cookie = 'isAdmin=true; path=/';
+        document.cookie = 'userId=admin; path=/';
         toast.success("Admin login successful")
         router.replace('/admin')
         return

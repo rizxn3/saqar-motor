@@ -40,7 +40,9 @@ export function ProductCard({ product }: ProductCardProps) {
       name: product.name,
       price: 0,
       quantity: quantityNum,
-      image: product.image || DEFAULT_IMAGE
+      image: product.image || DEFAULT_IMAGE,
+      manufacturer: product.manufacturer,
+      category: product.category
     })
     toast.success("Added to quotation request")
     setIsSelectingQuantity(false)

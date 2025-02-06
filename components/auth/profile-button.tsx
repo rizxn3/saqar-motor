@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/lib/auth/auth-context"
 import { Button } from "@/components/ui/button"
-import { User, Settings, LogOut } from "lucide-react"
+import { User, FileText, LogOut } from "lucide-react"
 import Link from "next/link"
 import {
   DropdownMenu,
@@ -28,19 +28,19 @@ export function ProfileButton() {
           <DropdownMenuLabel>My Account</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link href="/dashboard">
-              <Settings className="mr-2 h-4 w-4" />
-              Dashboard
-            </Link>
-          </DropdownMenuItem>
-          <DropdownMenuItem asChild>
-            <Link href="/profile">
+            <Link href="/profile" className="flex items-center">
               <User className="mr-2 h-4 w-4" />
               Profile
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href="/my-requests" className="flex items-center">
+              <FileText className="mr-2 h-4 w-4" />
+              My Requests
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={logout}>
+          <DropdownMenuItem onClick={logout} className="flex items-center">
             <LogOut className="mr-2 h-4 w-4" />
             Logout
           </DropdownMenuItem>
@@ -56,4 +56,4 @@ export function ProfileButton() {
       </Link>
     </Button>
   )
-} 
+}

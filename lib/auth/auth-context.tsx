@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Cookies from 'js-cookie';
 
 interface User {
   id: string;
@@ -35,10 +36,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           try {
             const parsedUser = JSON.parse(storedUser);
             setUser(parsedUser);
+            // Set userId cookie
+            Cookies.set('userId', parsedUser.id, { path: '/' });
           } catch (error) {
             console.error('Failed to parse stored user:', error);
             localStorage.removeItem('user');
-            document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
+            Cookies.remove('userId', { path: '/' });
           }
         }
       }
@@ -50,43 +53,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = (userData: User, redirectPath?: string) => {
-    try {
-      // Ensure we have the correct user data structure
-      const userToStore = {
-        id: userData.id, // This should be the UUID from the users table
-        auth_id: userData.auth_id,
-        name: userData.name,
-        email: userData.email,
-        role: userData.role,
-        company_name: userData.company_name
-      };
-
-      // Store in localStorage
-      localStorage.setItem('user', JSON.stringify(userToStore));
-      // Store in cookie for server-side access
-      document.cookie = `user=${JSON.stringify(userToStore)}; path=/`;
-      setUser(userToStore);
-
-      // Use the provided redirectPath or default to dashboard
-      if (redirectPath) {
-        router.push(redirectPath);
-      } else {
-        router.push('/dashboard');
-      }
-    } catch (error) {
-      console.error('Error storing user data:', error);
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+    // Set userId cookie on login
+    Cookies.set('userId', userData.id, { path: '/' });
+    if (redirectPath) {
+      router.push(redirectPath);
+    } else {
+      router.push('/dashboard');
     }
   };
 
   const logout = () => {
-    try {
-      localStorage.removeItem('user');
-      document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
-      setUser(null);
-      router.push('/login');
-    } catch (error) {
-      console.error('Error removing user data:', error);
-    }
+    setUser(null);
+    localStorage.removeItem('user');
+    // Remove userId cookie on logout
+    Cookies.remove('userId', { path: '/' });
+    router.push('/login');
   };
 
   return (

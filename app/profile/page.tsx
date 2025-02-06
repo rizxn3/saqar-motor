@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "sonner"
 
 export default function ProfilePage() {
-  const { user, isLoading, token } = useAuth()
+  const { user, isLoading } = useAuth()
   const router = useRouter()
   const [formData, setFormData] = useState({
     name: "",
@@ -21,105 +21,104 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/login')
-    } else if (user && token) {
-      fetch("/api/auth/profile", {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+    } else if (user) {
+      // Initialize form data from user object
+      setFormData({
+        name: user.name,
+        email: user.email,
+        companyName: user.company_name || "",
       })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.error) {
-            throw new Error(data.error)
-          }
-          setFormData({
-            name: data.name,
-            email: data.email,
-            companyName: data.company_name || "",
-          })
-        })
-        .catch((error) => {
-          console.error('Failed to fetch profile:', error)
-          toast.error("Failed to load profile")
-        })
     }
-  }, [user, isLoading, router, token])
+  }, [user, isLoading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!token) return
+    if (!user) return
 
     try {
       const response = await fetch("/api/auth/profile", {
         method: "PUT",
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          company_name: formData.companyName,
+        }),
       })
 
       const data = await response.json()
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to update profile")
+      if (data.error) {
+        throw new Error(data.error)
       }
 
-      toast.success("Profile updated successfully")
       setIsEditing(false)
+      toast.success("Profile updated successfully")
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update profile")
+      console.error('Failed to update profile:', error)
+      toast.error("Failed to update profile")
     }
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
-  }
-
-  if (!user) {
-    return null
+    return (
+      <div className="container mx-auto p-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            Loading...
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
-    <div className="container max-w-screen-lg mx-auto px-4 py-12">
+    <div className="container mx-auto p-6 space-y-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Profile</CardTitle>
-          <Button
-            variant="outline"
-            onClick={() => setIsEditing(!isEditing)}
-          >
-            {isEditing ? "Cancel" : "Edit Profile"}
-          </Button>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Name</label>
+              <label htmlFor="name" className="text-sm font-medium">Name</label>
               <Input
+                id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 disabled={!isEditing}
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
+              <label htmlFor="email" className="text-sm font-medium">Email</label>
               <Input
+                id="email"
                 value={formData.email}
                 disabled
-                type="email"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Company Name</label>
+              <label htmlFor="companyName" className="text-sm font-medium">Company Name</label>
               <Input
+                id="companyName"
                 value={formData.companyName}
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                 disabled={!isEditing}
               />
             </div>
-            {isEditing && (
-              <Button type="submit" className="w-full">
-                Save Changes
+            {isEditing ? (
+              <div className="flex gap-2">
+                <Button type="submit">Save Changes</Button>
+                <Button type="button" variant="outline" onClick={() => setIsEditing(false)}>
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button type="button" onClick={() => setIsEditing(true)}>
+                Edit Profile
               </Button>
             )}
           </form>
@@ -127,4 +126,4 @@ export default function ProfilePage() {
       </Card>
     </div>
   )
-} 
+}

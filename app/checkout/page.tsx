@@ -34,8 +34,14 @@ export default function CheckoutPage() {
         },
         body: JSON.stringify({
           items: items.map(item => ({
-            id: item.id,
+            productId: item.id,
             quantity: item.quantity,
+            product: {
+              name: item.name,
+              partNumber: item.partNumber,
+              manufacturer: item.manufacturer,
+              category: item.category
+            }
           })),
         }),
         credentials: 'include', // Important: include credentials for cookies

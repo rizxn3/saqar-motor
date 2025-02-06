@@ -5,6 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { format } from "date-fns"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 
 interface Product {
   name: string
@@ -14,19 +17,19 @@ interface Product {
 interface QuotationItem {
   id: string
   quantity: number
+  unitPrice?: number
   productSnapshot: {
     name: string
     partNumber: string
     manufacturer: string
     category: string
   }
-  product: Product
 }
 
 interface Quotation {
   id: string
   userId: string
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED'
+  status: string
   createdAt: string
   items: QuotationItem[]
   user: {
@@ -39,25 +42,86 @@ interface Quotation {
 export function Orders() {
   const [quotations, setQuotations] = useState<Quotation[]>([])
   const [loading, setLoading] = useState(true)
+  const [prices, setPrices] = useState<Record<string, number>>({})
 
   useEffect(() => {
-    const fetchQuotations = async () => {
-      try {
-        const response = await fetch('/api/admin/quotations')
-        if (!response.ok) {
-          throw new Error('Failed to fetch quotations')
-        }
-        const data = await response.json()
-        setQuotations(data)
-      } catch (error) {
-        console.error('Error fetching quotations:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchQuotations()
   }, [])
+
+  const fetchQuotations = async () => {
+    try {
+      console.log('Fetching quotations...')
+      const response = await fetch('/api/admin/quotations')
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Server error:', errorData)
+        throw new Error('Failed to fetch quotations')
+      }
+      const data = await response.json()
+      console.log('Fetched quotations:', data)
+      setQuotations(data)
+      
+      // Initialize prices from existing data
+      const initialPrices: Record<string, number> = {}
+      data.forEach((quotation: Quotation) => {
+        quotation.items.forEach(item => {
+          if (item.unitPrice) {
+            initialPrices[item.id] = item.unitPrice
+          }
+        })
+      })
+      setPrices(initialPrices)
+    } catch (error) {
+      console.error('Error fetching quotations:', error)
+      toast.error('Failed to fetch quotations')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handlePriceChange = (itemId: string, price: string) => {
+    const numPrice = parseFloat(price)
+    if (!isNaN(numPrice) && numPrice >= 0) {
+      setPrices(prev => ({ ...prev, [itemId]: numPrice }))
+    }
+  }
+
+  const calculateSubtotal = (items: QuotationItem[]) => {
+    return items.reduce((total, item) => {
+      const price = prices[item.id] || 0
+      return total + (price * item.quantity)
+    }, 0)
+  }
+
+  const handleUpdateQuotation = async (quotationId: string, items: QuotationItem[]) => {
+    try {
+      const itemPrices = items.map(item => ({
+        id: item.id,
+        unitPrice: prices[item.id] || 0
+      }))
+
+      const response = await fetch(`/api/admin/quotations/${quotationId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          status: 'UPDATED',
+          items: itemPrices
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to update quotation')
+      }
+
+      toast.success('Quotation updated successfully')
+      fetchQuotations() // Refresh the list
+    } catch (error) {
+      console.error('Error updating quotation:', error)
+      toast.error('Failed to update quotation')
+    }
+  }
 
   if (loading) {
     return (
@@ -114,6 +178,8 @@ export function Orders() {
                               <th className="text-left">Category</th>
                               <th className="text-left">Manufacturer</th>
                               <th className="text-right">Quantity</th>
+                              <th className="text-right">Unit Price</th>
+                              <th className="text-right">Total</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -124,11 +190,41 @@ export function Orders() {
                                 <td>{item.productSnapshot.category}</td>
                                 <td>{item.productSnapshot.manufacturer}</td>
                                 <td className="text-right">{item.quantity}</td>
+                                <td className="text-right w-32">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    step="0.01"
+                                    value={prices[item.id] || ''}
+                                    onChange={(e) => handlePriceChange(item.id, e.target.value)}
+                                    className="text-right"
+                                    disabled={quotation.status === 'UPDATED'}
+                                  />
+                                </td>
+                                <td className="text-right">
+                                  ${((prices[item.id] || 0) * item.quantity).toFixed(2)}
+                                </td>
                               </tr>
                             ))}
+                            <tr>
+                              <td colSpan={6} className="text-right font-medium">Subtotal:</td>
+                              <td className="text-right font-medium">
+                                ${calculateSubtotal(quotation.items).toFixed(2)}
+                              </td>
+                            </tr>
                           </tbody>
                         </table>
                       </div>
+                      {quotation.status !== 'UPDATED' && (
+                        <div className="flex justify-end">
+                          <Button 
+                            onClick={() => handleUpdateQuotation(quotation.id, quotation.items)}
+                            disabled={!quotation.items.every(item => prices[item.id] > 0)}
+                          >
+                            Send Price Update
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </AccordionContent>
                 </AccordionItem>

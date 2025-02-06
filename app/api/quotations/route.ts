@@ -13,24 +13,21 @@ interface User {
 
 export async function POST(req: Request) {
   try {
-    // Get user data from auth cookie
-    const cookieStore = cookies();
-    const userDataCookie = cookieStore.get('user');
-    
-    if (!userDataCookie?.value) {
+    // Get user ID from cookie
+    const userId = cookies().get('userId')?.value;
+    if (!userId) {
       return NextResponse.json(
         { error: "Please login to continue", requiresLogin: true },
         { status: 401 }
       );
     }
 
-    let user: User;
-    try {
-      user = JSON.parse(userDataCookie.value);
-      if (!user.id) {
-        throw new Error('Invalid user data');
-      }
-    } catch (error) {
+    // Get user from database
+    const user = await prisma.users.findUnique({
+      where: { id: userId }
+    });
+
+    if (!user) {
       return NextResponse.json(
         { error: "Invalid session. Please login again." },
         { status: 401 }
@@ -51,46 +48,25 @@ export async function POST(req: Request) {
     const quotation = await prisma.quotationRequest.create({
       data: {
         userId: user.id,
+        status: "PENDING",
         items: {
-          create: await Promise.all(items.map(async (item) => {
-            // Get current product data for snapshot
-            const product = await prisma.product.findUnique({
-              where: { id: item.id },
-              select: {
-                name: true,
-                partNumber: true,
-                price: true,
-                manufacturer: true,
-                category: true,
-              },
-            });
-
-            if (!product) {
-              throw new Error(`Product not found: ${item.id}`);
-            }
-
-            return {
-              productId: item.id,
-              quantity: item.quantity,
-              productSnapshot: product,
-            };
-          })),
-        },
+          create: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            productSnapshot: item.product // Use the product data sent from frontend
+          }))
+        }
       },
       include: {
-        items: {
-          include: {
-            product: true,
-          },
-        },
-      },
+        items: true
+      }
     });
 
     return NextResponse.json(quotation);
   } catch (error) {
-    console.error("Error creating quotation:", error);
+    console.error('Error creating quotation:', error);
     return NextResponse.json(
-      { error: "Failed to create quotation" },
+      { error: "Failed to submit request" },
       { status: 500 }
     );
   }
@@ -98,26 +74,11 @@ export async function POST(req: Request) {
 
 export async function GET(req: Request) {
   try {
-    // Get user data from auth cookie
-    const cookieStore = cookies();
-    const userDataCookie = cookieStore.get('user');
-    
-    if (!userDataCookie?.value) {
+    // Get user ID from cookie
+    const userId = cookies().get('userId')?.value;
+    if (!userId) {
       return NextResponse.json(
         { error: "Please login to continue" },
-        { status: 401 }
-      );
-    }
-
-    let user: User;
-    try {
-      user = JSON.parse(userDataCookie.value);
-      if (!user.id) {
-        throw new Error('Invalid user data');
-      }
-    } catch (error) {
-      return NextResponse.json(
-        { error: "Invalid session. Please login again." },
         { status: 401 }
       );
     }
@@ -125,28 +86,19 @@ export async function GET(req: Request) {
     // Get user's quotations
     const quotations = await prisma.quotationRequest.findMany({
       where: {
-        userId: user.id,
+        userId: userId
       },
       include: {
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                partNumber: true,
-              },
-            },
-          },
-        },
+        items: true
       },
       orderBy: {
-        createdAt: "desc",
-      },
+        createdAt: 'desc'
+      }
     });
 
     return NextResponse.json(quotations);
   } catch (error) {
-    console.error("Error fetching quotations:", error);
+    console.error('Error fetching quotations:', error);
     return NextResponse.json(
       { error: "Failed to fetch quotations" },
       { status: 500 }
