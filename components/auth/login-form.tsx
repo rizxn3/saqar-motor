@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth/auth-context"
 import { Button } from "@/components/ui/button"
@@ -19,6 +19,15 @@ export function LoginForm({ isAdmin = false }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const { login } = useAuth()
   const router = useRouter()
+  const [redirectPath, setRedirectPath] = useState<string | null>(null)
+
+  useEffect(() => {
+    // Check for redirect path in localStorage
+    const savedPath = localStorage.getItem('redirectAfterLogin')
+    if (savedPath) {
+      setRedirectPath(savedPath)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -54,7 +63,14 @@ export function LoginForm({ isAdmin = false }: LoginFormProps) {
       // Regular user login
       await login(data.user)
       toast.success("Login successful")
-      router.push('/dashboard')
+
+      // Handle redirect after successful login
+      if (redirectPath) {
+        localStorage.removeItem('redirectAfterLogin')
+        router.push(redirectPath)
+      } else {
+        router.push('/dashboard')
+      }
     } catch (error) {
       console.error('Login error:', error);
       toast.error(error instanceof Error ? error.message : "Login failed")
@@ -117,4 +133,4 @@ export function LoginForm({ isAdmin = false }: LoginFormProps) {
       </CardContent>
     </Card>
   )
-} 
+}

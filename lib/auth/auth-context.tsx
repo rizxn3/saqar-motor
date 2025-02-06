@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 
 interface User {
   id: string;
+  auth_id: string;
   name: string;
   email: string;
   role: string;
+  company_name?: string;
 }
 
 interface AuthContextType {
@@ -35,7 +37,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(parsedUser);
           } catch (error) {
             console.error('Failed to parse stored user:', error);
-            localStorage.removeItem('user'); // Clear invalid data
+            localStorage.removeItem('user');
+            document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
           }
         }
       }
@@ -48,10 +51,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = (userData: User, redirectPath?: string) => {
     try {
-      localStorage.setItem('user', JSON.stringify(userData));
-      setUser(userData);
+      // Ensure we have the correct user data structure
+      const userToStore = {
+        id: userData.id, // This should be the UUID from the users table
+        auth_id: userData.auth_id,
+        name: userData.name,
+        email: userData.email,
+        role: userData.role,
+        company_name: userData.company_name
+      };
+
+      // Store in localStorage
+      localStorage.setItem('user', JSON.stringify(userToStore));
+      // Store in cookie for server-side access
+      document.cookie = `user=${JSON.stringify(userToStore)}; path=/`;
+      setUser(userToStore);
+
       // Use the provided redirectPath or default to dashboard
-      router.push(redirectPath || '/dashboard');
+      if (redirectPath) {
+        router.push(redirectPath);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (error) {
       console.error('Error storing user data:', error);
     }
@@ -60,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = () => {
     try {
       localStorage.removeItem('user');
+      document.cookie = 'user=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT;';
       setUser(null);
       router.push('/login');
     } catch (error) {
@@ -80,4 +102,4 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-}; 
+};

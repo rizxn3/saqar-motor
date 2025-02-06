@@ -46,6 +46,8 @@ import { ChevronDown, ChevronUp } from "lucide-react"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
 import { ImageUpload } from "@/components/ui/image-upload"
+import { Orders } from "@/components/admin/orders"
+import { Catalog } from "@/components/admin/catalog"
 
 const DEFAULT_PLACEHOLDER = 'https://placehold.co/300x300/gray/white?text=No+Image';
 
@@ -81,6 +83,7 @@ export default function AdminPage() {
     inStock: true,
     quantity: 0
   })
+  const [activeTab, setActiveTab] = useState("products")
 
   useEffect(() => {
     const isAdmin = document.cookie.includes('isAdmin=true');
@@ -542,10 +545,11 @@ export default function AdminPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="products" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-flex">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="w-full justify-start">
           <TabsTrigger value="products">Products</TabsTrigger>
           <TabsTrigger value="catalog">Catalog</TabsTrigger>
+          <TabsTrigger value="orders">Orders</TabsTrigger>
         </TabsList>
         
         <TabsContent value="products" className="space-y-4">
@@ -619,129 +623,13 @@ export default function AdminPage() {
             </Table>
           </div>
         </TabsContent>
-        
+
         <TabsContent value="catalog" className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search categories..."
-                    value={categorySearch}
-                    onChange={(e) => setCategorySearch(e.target.value)}
-                    className="pl-10 pr-10"
-                  />
-                  {categorySearch && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-accent"
-                      onClick={() => setCategorySearch("")}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <Input
-                placeholder="New category name"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddCategory()}
-              />
-              <Button onClick={handleAddCategory}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category Name</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredCategories.map((category) => (
-                  <TableRow key={category}>
-                    <TableCell>{category}</TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleDeleteCategory(category)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Input
-                    placeholder="Search manufacturers..."
-                    value={manufacturerSearch}
-                    onChange={(e) => setManufacturerSearch(e.target.value)}
-                    className="pl-10 pr-10"
-                  />
-                  {manufacturerSearch && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-accent"
-                      onClick={() => setManufacturerSearch("")}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              </div>
-              <Input
-                placeholder="New manufacturer name"
-                value={newManufacturer}
-                onChange={(e) => setNewManufacturer(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleAddManufacturer()}
-              />
-              <Button onClick={handleAddManufacturer}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add
-              </Button>
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Manufacturer Name</TableHead>
-                  <TableHead className="w-[100px]">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredManufacturers.map((manufacturer) => (
-                  <TableRow key={manufacturer}>
-                    <TableCell>{manufacturer}</TableCell>
-                    <TableCell>
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleDeleteManufacturer(manufacturer)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <Catalog />
+        </TabsContent>
+        
+        <TabsContent value="orders" className="space-y-4">
+          <Orders />
         </TabsContent>
       </Tabs>
       
@@ -819,4 +707,4 @@ export default function AdminPage() {
       </AlertDialog>
     </div>
   )
-} 
+}

@@ -1,26 +1,59 @@
 "use client"
 
-import { useRouter } from "next/navigation"
-import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Card } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useCartStore } from "@/lib/store/cart"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import Image from "next/image"
-import { Trash2 } from "lucide-react"
-import { Minus, Plus } from "lucide-react"
-import { Input } from "@/components/ui/input"
+import { Trash2, Minus, Plus } from "lucide-react"
+import { useAuth } from "@/lib/auth/auth-context"
+import { useEffect, useState } from "react"
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const { items, removeItem, updateQuantity } = useCartStore()
+  const { items, removeItem, updateQuantity, clearCart } = useCartStore()
+  const { user } = useAuth()
+
+  const handleSubmitRequest = async () => {
+    try {
+      // Check if user is logged in using auth context
+      if (!user) {
+        localStorage.setItem('redirectAfterLogin', '/checkout')
+        router.push('/login')
+        return
+      }
+
+      // User is logged in, proceed with submission
+      const response = await fetch('/api/quotations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: items.map(item => ({
+            id: item.id,
+            quantity: item.quantity,
+          })),
+        }),
+        credentials: 'include', // Important: include credentials for cookies
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Failed to submit quotation')
+      }
+
+      toast.success("Your quotation request has been submitted successfully!")
+      clearCart()
+      router.push("/")
+    } catch (error) {
+      console.error('Error submitting quotation:', error)
+      toast.error("Failed to submit quotation request. Please try again.")
+    }
+  }
 
   const handleQuantityChange = (id: string, value: string) => {
     const newQuantity = parseInt(value)
@@ -198,10 +231,7 @@ export default function CheckoutPage() {
         <Button variant="outline" onClick={() => router.push("/")}>
           Add More Items
         </Button>
-        <Button onClick={() => {
-          toast.success("Your quotation request has been submitted successfully!")
-          router.push("/")
-        }}>
+        <Button onClick={handleSubmitRequest}>
           Submit Request
         </Button>
       </div>
